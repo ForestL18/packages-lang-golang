@@ -107,6 +107,12 @@ BOOTSTRAP_1_22_HASH:=012a7e1f37f362c0918c1dfa3334458ac2da1628c4b9cf4d9ca02db986e
 
 BOOTSTRAP_1_22_BUILD_DIR:=$(HOST_BUILD_DIR)/.go_bootstrap_1.22
 
+BOOTSTRAP_1_24_SOURCE:=go1.24.13.src.tar.gz
+BOOTSTRAP_1_24_SOURCE_URL:=$(GO_SOURCE_URLS)
+BOOTSTRAP_1_24_HASH:=639a6204c2486b137df1eb6e78ee3ed038f9877d0e4b5a465e796a2153f858d7
+
+BOOTSTRAP_1_24_BUILD_DIR:=$(HOST_BUILD_DIR)/.go_bootstrap_1.24
+
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/package.mk
 include ../golang-compiler.mk
@@ -118,6 +124,7 @@ BOOTSTRAP_UNPACK:=$(HOST_TAR) -C "$(BOOTSTRAP_BUILD_DIR)" --strip-components=1 -
 BOOTSTRAP_1_17_UNPACK:=$(HOST_TAR) -C "$(BOOTSTRAP_1_17_BUILD_DIR)" --strip-components=1 -xzf "$(DL_DIR)/$(BOOTSTRAP_1_17_SOURCE)"
 BOOTSTRAP_1_20_UNPACK:=$(HOST_TAR) -C "$(BOOTSTRAP_1_20_BUILD_DIR)" --strip-components=1 -xzf "$(DL_DIR)/$(BOOTSTRAP_1_20_SOURCE)"
 BOOTSTRAP_1_22_UNPACK:=$(HOST_TAR) -C "$(BOOTSTRAP_1_22_BUILD_DIR)" --strip-components=1 -xzf "$(DL_DIR)/$(BOOTSTRAP_1_22_SOURCE)"
+BOOTSTRAP_1_24_UNPACK:=$(HOST_TAR) -C "$(BOOTSTRAP_1_24_BUILD_DIR)" --strip-components=1 -xzf "$(DL_DIR)/$(BOOTSTRAP_1_24_SOURCE)"
 
 # don't strip ELF executables in test data
 RSTRIP:=:
@@ -262,6 +269,22 @@ Hooks/HostPrepare/Post+=Bootstrap-1.22/Prepare
 
 $(eval $(call GoCompiler/AddProfile,Bootstrap-1.22,$(BOOTSTRAP_1_22_BUILD_DIR),,bootstrap-1.22,$(GO_HOST_OS_ARCH)))
 
+# Bootstrap 1.24
+
+define Download/golang-bootstrap-1.24
+  FILE:=$(BOOTSTRAP_1_24_SOURCE)
+  URL:=$(BOOTSTRAP_1_24_SOURCE_URL)
+  HASH:=$(BOOTSTRAP_1_24_HASH)
+endef
+$(eval $(call Download,golang-bootstrap-1.24))
+
+define Bootstrap-1.24/Prepare
+	mkdir -p "$(BOOTSTRAP_1_24_BUILD_DIR)" && $(BOOTSTRAP_1_24_UNPACK) ;
+endef
+Hooks/HostPrepare/Post+=Bootstrap-1.24/Prepare
+
+$(eval $(call GoCompiler/AddProfile,Bootstrap-1.24,$(BOOTSTRAP_1_24_BUILD_DIR),,bootstrap-1.24,$(GO_HOST_OS_ARCH)))
+
 # Host
 
 ifeq ($(GO_HOST_PIE_SUPPORTED),1)
@@ -307,8 +330,13 @@ define Host/Compile
 		$(HOST_GO_VARS) \
 	)
 
-	$(call GoCompiler/Host/Make, \
+	$(call GoCompiler/Bootstrap-1.24/Make, \
 		GOROOT_BOOTSTRAP="$(BOOTSTRAP_1_22_BUILD_DIR)" \
+		$(HOST_GO_VARS) \
+	)
+
+	$(call GoCompiler/Host/Make, \
+		GOROOT_BOOTSTRAP="$(BOOTSTRAP_1_24_BUILD_DIR)" \
 		$(if $(HOST_GO_ENABLE_PIE),GO_LDFLAGS="-buildmode pie") \
 		$(HOST_GO_VARS) \
 	)
